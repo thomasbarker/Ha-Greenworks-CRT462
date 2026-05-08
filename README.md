@@ -6,23 +6,58 @@ A HACS-compatible Home Assistant integration for the **Greenworks CRT4262 ride-o
 
 ## Features
 
+### Status & connectivity
+
 | Entity | Type | Notes |
 |---|---|---|
 | Online | Binary Sensor | Connectivity device class |
 | Active | Binary Sensor | Running device class |
-| Last Seen | Sensor | Timestamp |
+| Last Updated | Sensor | Timestamp — when data was last successfully refreshed from the cloud |
+| Last Seen | Sensor | Timestamp — last time mower connected to cloud |
 | Last Disconnected | Sensor | Timestamp |
-| Latitude / Longitude | Sensor | Last known GPS fix |
+
+### GPS
+
+| Entity | Type | Notes |
+|---|---|---|
+| Latitude | Sensor | Degrees; GPS timestamp in attributes |
+| Longitude | Sensor | Degrees |
+
+### Battery
+
+| Entity | Type | Notes |
+|---|---|---|
+| Battery | Sensor | %, total charge level |
+| Battery Slot 1 – 6 | Sensor | %, per-slot charge level (diagnostic) |
+
+### Mowing statistics
+
+| Entity | Type | Notes |
+|---|---|---|
 | Total Working Time | Sensor | Minutes, total lifetime |
 | Total Working Area | Sensor | m², total lifetime |
-| Last Session Duration | Sensor | Minutes, with start/end as attributes |
+| Last Session Duration | Sensor | Minutes; session start/end timestamps in attributes |
 | Last Session Area | Sensor | m² |
-| Mowing Sessions | Sensor | Count, last 5 sessions in attributes |
+| Mowing Sessions | Sensor | Count; last 5 sessions (start, end, id) in attributes |
+| Remaining Cutting Area | Sensor | m², estimated remaining on current charge |
+| Remaining Cutting Time | Sensor | Minutes, estimated remaining on current charge |
+
+### Settings
+
+| Entity | Type | Notes |
+|---|---|---|
 | Cut Height | Sensor | mm |
-| Drive Motor A / B | Sensor | RPM (live when mowing), diagnostic |
-| Left / Mid / Right Blade RPM | Sensor | RPM (live when mowing), diagnostic |
-| Firmware / MCU Version | Sensor | Diagnostic |
-| Connection Count | Sensor | Diagnostic |
+
+### Diagnostics *(hidden by default)*
+
+| Entity | Type | Notes |
+|---|---|---|
+| Drive Motor A / B | Sensor | RPM (non-zero when mowing) |
+| Left / Mid / Right Blade RPM | Sensor | RPM (non-zero when mowing) |
+| Firmware Version | Sensor | |
+| MCU Version | Sensor | |
+| Connection Count | Sensor | Total lifetime cloud connections |
+| Status Code (DP 92) | Sensor | Raw datapoint; meaning unconfirmed |
 
 ---
 
@@ -67,6 +102,7 @@ After setup, click **Configure** on the integration card to change the update in
 ## Notes
 
 - Data is fetched from two Gelibo/Xlink cloud backends — `xapi.globetools.systems` (device status + GPS) and `idds.globetools.systems` (mowing statistics). Both require an active internet connection.
+- If a scheduled refresh fails (network outage, temporary API error), entities remain available and continue showing their last known values. The **Last Updated** sensor shows when data was last successfully fetched, making it easy to spot stale readings.
 - GPS and RPM datapoints are only non-zero when the mower is powered on and connected.
 - The mower must be fully powered on (not just the battery) for Bluetooth pairing and cloud connectivity to function.
 - This integration is not affiliated with or endorsed by Greenworks.
