@@ -25,7 +25,8 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 # Datapoints polled from v_device endpoint
-_DATAPOINTS = "1,2,4,6,7,8,9,10,11,16,18,19,24,28,92,94,95,97"
+# DP 0 = total battery %, DPs 142/148/154/160/166/172 = individual slot % (CRT category)
+_DATAPOINTS = "0,1,2,4,6,7,8,9,10,11,16,18,19,24,28,92,94,95,97,142,148,154,160,166,172"
 
 
 class GreenworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -323,6 +324,13 @@ class GreenworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 f"/{product_id}/{MOWER_MODEL}/{device_id}"
             ),
             "sessions": f"{IDDS_BASE}/api/v2/report/sessions/{mac}/10",
+            # Remaining cutting capacity on current charge
+            "remaining_cutting": f"{IDDS_BASE}/api/v2/remainingCutting/{device_id}",
+            # Per-slot battery health: totalPower, per-slot power/state/temperature
+            "battery_check": (
+                f"{IDDS_BASE}/api/Battery/BatterySlotCheck"
+                f"/{product_id}/{MOWER_MODEL}/{device_id}"
+            ),
         }
 
         for key, url in calls.items():
@@ -458,6 +466,8 @@ def _build_state(dev: dict, vdevice: dict, idds: dict) -> dict[str, Any]:
     curr_dur = idds.get("current_duration") or {}
     curr_area = idds.get("current_area") or {}
     sessions = idds.get("sessions") or {}
+    remaining = idds.get("remaining_cutting") or {}
+    batt_check = idds.get("battery_check") or {}
 
     total_dur_ms = _safe_float(total.get("totalWorkingDuration"))
     total_area_m2 = _safe_float(total.get("totalWorkingArea"))
@@ -465,6 +475,28 @@ def _build_state(dev: dict, vdevice: dict, idds: dict) -> dict[str, Any]:
     curr_area_acre = _safe_float(curr_area.get("value"))
     curr_session_start_ts = curr_dur.get("startTimestamp")
     curr_session_end_ts = curr_dur.get("endTimestamp")
+
+    # Remaining cutting — area likely in acres (same as CurrentCuttingArea endpoint)
+    remaining_area_raw = _safe_float(remaining.get("cuttingArea"))
+    remaining_unit = str(remaining.get("unit") or "").lower()
+    remaining_area_m2 = round(
+        remaining_area_raw * 4046.86 if "acre" in remaining_unit else remaining_area_raw,
+        1,
+    )
+    remaining_time_min = _safe_float(remaining.get("cuttingTime"))
+
+    # Battery slot check — per-slot health from IDDS
+    battery_slot_details = [
+        {
+            "slot": d.get("batterySlotNumber"),
+            "name": d.get("batteryName"),
+            "power_pct": d.get("power"),
+            "state": d.get("batteryState"),
+            "temperature_c": d.get("batteryTemperature"),
+            "in_slot": d.get("isInSlot"),
+        }
+        for d in (batt_check.get("details") or [])
+    ]
 
     return {
         # Device identity
@@ -500,6 +532,21 @@ def _build_state(dev: dict, vdevice: dict, idds: dict) -> dict[str, Any]:
         "current_session_end_ts": curr_session_end_ts,
         "session_count": _safe_int(sessions.get("totalNumber")),
         "latest_sessions": (sessions.get("reportSessions") or [])[:5],
+        # Remaining cutting capacity on current charge
+        "remaining_cutting_area_m2": remaining_area_m2,
+        "remaining_cutting_time_min": round(remaining_time_min, 1),
+        "remaining_cutting_unit": str(remaining.get("unit") or ""),
+        # Battery — DP 0 = total %, IDDS battery check for detailed slot info
+        "battery_level": _dp_int(vdevice, "0"),
+        "battery_total_power": _safe_float(batt_check.get("totalPower")) or None,
+        "battery_slot_details": battery_slot_details,
+        # Individual battery slot % (CRT category, DPs 142/148/154/160/166/172)
+        "battery_slot_1": _dp_int(vdevice, "142"),
+        "battery_slot_2": _dp_int(vdevice, "148"),
+        "battery_slot_3": _dp_int(vdevice, "154"),
+        "battery_slot_4": _dp_int(vdevice, "160"),
+        "battery_slot_5": _dp_int(vdevice, "166"),
+        "battery_slot_6": _dp_int(vdevice, "172"),
         # Motor datapoints (RPM — 0 when mower is off)
         "dp_motor_a_rpm": _dp_int(vdevice, "7"),
         "dp_motor_b_rpm": _dp_int(vdevice, "11"),
@@ -508,5 +555,6 @@ def _build_state(dev: dict, vdevice: dict, idds: dict) -> dict[str, Any]:
         "dp_blade_right_rpm": _dp_int(vdevice, "28"),
         # Settings datapoints
         "dp_cut_height_mm": _dp_int(vdevice, "9"),
+        # Diagnostic datapoints (meaning unconfirmed from source)
         "dp_92": _dp_int(vdevice, "92"),
     }

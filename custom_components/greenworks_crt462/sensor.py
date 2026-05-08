@@ -15,6 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     DEGREE,
     EntityCategory,
+    PERCENTAGE,
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
@@ -186,6 +187,85 @@ SENSORS: tuple[GreenworksSensorDescription, ...] = (
         data_key="dp_cut_height_mm",
         icon="mdi:ruler",
     ),
+    # ---- Battery ----
+    GreenworksSensorDescription(
+        key="battery_level",
+        name="Battery",
+        device_class=SensorDeviceClass.BATTERY,
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        data_key="battery_level",
+        icon="mdi:battery",
+    ),
+    GreenworksSensorDescription(
+        key="battery_slot_1",
+        name="Battery Slot 1",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        data_key="battery_slot_1",
+        icon="mdi:battery",
+    ),
+    GreenworksSensorDescription(
+        key="battery_slot_2",
+        name="Battery Slot 2",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        data_key="battery_slot_2",
+        icon="mdi:battery",
+    ),
+    GreenworksSensorDescription(
+        key="battery_slot_3",
+        name="Battery Slot 3",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        data_key="battery_slot_3",
+        icon="mdi:battery",
+    ),
+    GreenworksSensorDescription(
+        key="battery_slot_4",
+        name="Battery Slot 4",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        data_key="battery_slot_4",
+        icon="mdi:battery",
+    ),
+    GreenworksSensorDescription(
+        key="battery_slot_5",
+        name="Battery Slot 5",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        data_key="battery_slot_5",
+        icon="mdi:battery",
+    ),
+    GreenworksSensorDescription(
+        key="battery_slot_6",
+        name="Battery Slot 6",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        data_key="battery_slot_6",
+        icon="mdi:battery",
+    ),
+    # ---- Remaining cutting capacity ----
+    GreenworksSensorDescription(
+        key="remaining_cutting_area",
+        name="Remaining Cutting Area",
+        native_unit_of_measurement=UNIT_M2,
+        data_key="remaining_cutting_area_m2",
+        icon="mdi:grass",
+    ),
+    GreenworksSensorDescription(
+        key="remaining_cutting_time",
+        name="Remaining Cutting Time",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        data_key="remaining_cutting_time_min",
+        icon="mdi:timer-sand",
+    ),
     # ---- Diagnostic ----
     GreenworksSensorDescription(
         key="firmware_version",
@@ -208,6 +288,13 @@ SENSORS: tuple[GreenworksSensorDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         data_key="online_count",
         icon="mdi:counter",
+    ),
+    GreenworksSensorDescription(
+        key="dp_92",
+        name="Status Code (DP 92)",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        data_key="dp_92",
+        icon="mdi:information-outline",
     ),
 )
 
@@ -291,6 +378,14 @@ class GreenworksSensor(CoordinatorEntity[GreenworksCoordinator], SensorEntity):
                 except (ValueError, TypeError, OSError):
                     continue
             attrs["latest_sessions"] = safe_sessions
+        elif self.entity_description.key == "battery_level":
+            # Include IDDS battery check details as attributes when available
+            total_power = data.get("battery_total_power")
+            if total_power is not None:
+                attrs["idds_total_power_pct"] = total_power
+            slot_details = data.get("battery_slot_details")
+            if slot_details:
+                attrs["slot_details"] = slot_details
 
         return attrs
 
