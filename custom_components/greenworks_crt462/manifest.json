@@ -2,11 +2,11 @@
   "domain": "greenworks_crt462",
   "name": "Greenworks CRT4262",
   "version": "1.0.0",
-  "documentation": "https://github.com/YOUR_USERNAME/Greenworks-crt462",
+  "documentation": "https://github.com/thomasbarker/Ha-Greenworks-CRT462",
+  "issue_tracker": "https://github.com/thomasbarker/Ha-Greenworks-CRT462/issues",
   "dependencies": [],
   "codeowners": [],
   "requirements": [],
   "iot_class": "cloud_polling",
-  "config_flow": true,
-  "icon": "icon.png"
+  "config_flow": true
 }
