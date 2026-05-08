@@ -1,6 +1,6 @@
-# Greenworks CRT4262 – Home Assistant Integration
+# Greenworks CRT462 (Type 2) – Home Assistant Integration
 
-A HACS-compatible Home Assistant integration for the **Greenworks CRT4262 ride-on mower**, using the native Xlink/Gelibo IoT cloud API that powers the official Greenworks Connect app.
+A HACS-compatible Home Assistant integration for the **Greenworks CRT462 (Type 2) ride-on mower**, using the native Xlink/Gelibo IoT cloud API that powers the official Greenworks Connect app.
 
 ---
 
@@ -63,7 +63,7 @@ A HACS-compatible Home Assistant integration for the **Greenworks CRT4262 ride-o
 
 ## Prerequisites
 
-- A **Greenworks Connect** account that has been successfully paired with your CRT4262 (verify in the app first).
+- A **Greenworks Connect** account that has been successfully paired with your CRT462 (Type 2) (verify in the app first).
 - Home Assistant 2024.1 or later.
 - [HACS](https://hacs.xyz/) installed.
 
@@ -76,7 +76,7 @@ A HACS-compatible Home Assistant integration for the **Greenworks CRT4262 ride-o
 1. In Home Assistant, open **HACS → Integrations**.
 2. Click the three-dot menu → **Custom repositories**.
 3. Enter the URL of this repository and select category **Integration**.
-4. Click **Add**, then find *Greenworks CRT4262* and click **Download**.
+4. Click **Add**, then find *Greenworks CRT462 (Type 2)* and click **Download**.
 5. Restart Home Assistant.
 
 ### Manual
@@ -89,7 +89,7 @@ A HACS-compatible Home Assistant integration for the **Greenworks CRT4262 ride-o
 ## Configuration
 
 1. Go to **Settings → Devices & Services → Add Integration**.
-2. Search for **Greenworks CRT4262**.
+2. Search for **Greenworks CRT462 (Type 2)**.
 3. Enter your Greenworks Connect email address and password.
 4. Set the desired **update interval** in minutes (default: 60).
 
