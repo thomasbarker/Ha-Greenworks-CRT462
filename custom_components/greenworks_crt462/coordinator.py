@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import aiohttp
@@ -66,6 +66,9 @@ class GreenworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Set to True when login fails due to server rejecting credentials (4xx)
         # vs a transient network error. Used by __init__.py to raise the right exception.
         self.auth_failed: bool = False
+
+        # Last successfully fetched data — returned on update failure to keep entities available
+        self._last_good_data: dict[str, Any] | None = None
 
     # ------------------------------------------------------------------
     # Authentication
@@ -352,40 +355,57 @@ class GreenworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch all data. Called by DataUpdateCoordinator on each poll."""
-        await self._ensure_tokens()
-
-        if not self._xapi_token:
-            raise UpdateFailed("Not authenticated — check your credentials")
-
         try:
-            devices = await self._fetch_devices()
-        except UpdateFailed:
-            raise
+            await self._ensure_tokens()
+
+            if not self._xapi_token:
+                raise UpdateFailed("Not authenticated — check your credentials")
+
+            try:
+                devices = await self._fetch_devices()
+            except UpdateFailed:
+                raise
+            except Exception as err:
+                raise UpdateFailed(f"Device list fetch failed: {err}") from err
+
+            if not devices:
+                raise UpdateFailed("No devices found on this account")
+
+            dev = devices[0]
+            device_id = str(dev.get("id", ""))
+            product_id = str(dev.get("product_id", ""))
+            mac = str(dev.get("mac", ""))
+
+            # Cache for use in property accessors
+            self._device_id = device_id
+            self._product_id = product_id
+            self._mac = mac
+
+            vdevice: dict = {}
+            if device_id and product_id:
+                vdevice = await self._fetch_vdevice(product_id, device_id)
+
+            idds: dict = {}
+            if device_id and product_id and mac:
+                idds = await self._fetch_idds(product_id, mac, device_id)
+
+            result = _build_state(dev, vdevice, idds)
+            result["last_updated"] = datetime.now(timezone.utc)
+            self._last_good_data = result
+            return result
+
         except Exception as err:
-            raise UpdateFailed(f"Device list fetch failed: {err}") from err
-
-        if not devices:
-            raise UpdateFailed("No devices found on this account")
-
-        dev = devices[0]
-        device_id = str(dev.get("id", ""))
-        product_id = str(dev.get("product_id", ""))
-        mac = str(dev.get("mac", ""))
-
-        # Cache for use in property accessors
-        self._device_id = device_id
-        self._product_id = product_id
-        self._mac = mac
-
-        vdevice: dict = {}
-        if device_id and product_id:
-            vdevice = await self._fetch_vdevice(product_id, device_id)
-
-        idds: dict = {}
-        if device_id and product_id and mac:
-            idds = await self._fetch_idds(product_id, mac, device_id)
-
-        return _build_state(dev, vdevice, idds)
+            if self._last_good_data is not None:
+                _LOGGER.warning(
+                    "Greenworks data fetch failed (%s); returning last known values "
+                    "(last updated: %s)",
+                    err,
+                    self._last_good_data.get("last_updated"),
+                )
+                return self._last_good_data
+            if isinstance(err, UpdateFailed):
+                raise
+            raise UpdateFailed(f"Unexpected error: {err}") from err
 
 
 # ------------------------------------------------------------------

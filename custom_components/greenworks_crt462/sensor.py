@@ -63,6 +63,14 @@ class GreenworksSensorDescription(SensorEntityDescription):
 
 
 SENSORS: tuple[GreenworksSensorDescription, ...] = (
+    # ---- Data freshness ----
+    GreenworksSensorDescription(
+        key="last_updated",
+        name="Last Updated",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        data_key="last_updated",
+        icon="mdi:clock-check-outline",
+    ),
     # ---- Status timestamps ----
     GreenworksSensorDescription(
         key="last_seen",
